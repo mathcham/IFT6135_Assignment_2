@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 
 
 def clones(module, N):
-    "
+    """
     A helper function for producing N identical layers (each with their own parameters).
     
     inputs: 
@@ -39,14 +39,14 @@ def clones(module, N):
 
     returns:
         a ModuleList with the copies of the module (the ModuleList is itself also a module)
-    "
+    """
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
 # Problem 1
 class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities.
   def __init__(self, emb_size, hidden_size, seq_len, batch_size, vocab_size, num_layers, dp_keep_prob):
     """
-    emb_size:     The numvwe of units in the input embeddings
+    emb_size:     The number of units in the input embeddings
     hidden_size:  The number of hidden units per layer
     seq_len:      The length of the input sequences
     vocab_size:   The number of tokens in the vocabulary (10,000 for Penn TreeBank)
@@ -72,11 +72,13 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     # for Pytorch to recognize these parameters as belonging to this nn.Module 
     # and compute their gradients automatically. You're not obligated to use the
     # provided clones function.
+    print("what")
 
   def init_weights_uniform(self):
     # TODO ========================
     # Initialize all the weights uniformly in the range [-0.1, 0.1]
     # and all the biases to 0 (in place)
+    return 0
 
   def init_hidden(self):
     # TODO ========================
@@ -84,7 +86,7 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     """
     This is used for the first mini-batch in an epoch, only.
     """
-    return # a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
+    return 0# a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
 
   def forward(self, inputs, hidden):
     # TODO ========================
@@ -166,10 +168,11 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
 
   def init_weights_uniform(self):
     # TODO ========================
+    return 0
 
   def init_hidden(self):
     # TODO ========================
-    return # a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
+    return 0# a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
 
   def forward(self, inputs, hidden):
     # TODO ========================
