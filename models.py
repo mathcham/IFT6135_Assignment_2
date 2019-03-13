@@ -77,27 +77,35 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     self.batch_size = batch_size
     self.vocab_size = vocab_size
     
-    gate_size = hidden_size
+    self.input = nn.Embedding(vocab_size, emb_size)
     
-    self._all_weights = []
+    self.recur = nn.ModuleList()
     
-    for layer in range(num_layers):
-        layer_input_size = emb_size if layer == 0 else hidden_size
-        w_ih = nn.Parameter(torch.Tensor(gate_size, layer_input_size))
-        w_hh = nn.Parameter(torch.Tensor(gate_size, hidden_size))
-        b_ih = nn.Parameter(torch.Tensor(gate_size))
-        b_hh = nn.Parameter(torch.Tensor(gate_size))
-        layer_params = (w_ih, w_hh, b_ih, b_hh)
-        for param in layer_params:
-            self._all_weights.append(param)
+    """ Create the structure for each recurrent layer """
+    # ih = input to hidden layer
+    # hh = hidden to hidden layer
+    w_ih = nn.Parameter(torch.Tensor(hidden_size, layer_input_size))
+    w_hh = nn.Parameter(torch.Tensor(hidden_size, hidden_size))
+    b_ih = nn.Parameter(torch.Tensor(hidden_size))
+    b_hh = nn.Parameter(torch.Tensor(hidden_size))
+    layer_params = (w_ih, w_hh, b_ih, b_hh)
+    
+    fc = nn.Linear(hidden_size,hidden_size)
+    
+    for param in layer_params:
+        self._all_weights.append(param)
     
     init_weights_uniform()
+    
+    self.output = nn.Linear(hidden_size,1)
+    
 
   def init_weights_uniform(self):
     # TODO ========================
     # Initialize all the weights uniformly in the range [-0.1, 0.1]
     # and all the biases to 0 (in place)   
     
+    # for weight in 
     nn.init.uniform_(weight, -0.1, 0.1)
 
   def init_hidden(self):
