@@ -42,7 +42,7 @@ def clones(module, N):
     """
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
-# Problem 1
+# Problem 1 ######################## see : https://github.com/pytorch/benchmark/blob/master/rnns/benchmarks/lstm_variants/lstm.py
 class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities.
   def __init__(self, emb_size, hidden_size, seq_len, batch_size, vocab_size, num_layers, dp_keep_prob):
     """
@@ -79,12 +79,12 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     
     self.input = nn.Embedding(vocab_size, emb_size)
     
-    self.recur = nn.ModuleList()
+    self.recur_list = nn.ModuleList()
     
     """ Create the structure for each recurrent layer """
     # ih = input to hidden layer
     # hh = hidden to hidden layer
-    w_ih = nn.Parameter(torch.Tensor(hidden_size, layer_input_size))
+    w_ih = nn.Parameter(torch.Tensor(hidden_size, emb_size))
     w_hh = nn.Parameter(torch.Tensor(hidden_size, hidden_size))
     b_ih = nn.Parameter(torch.Tensor(hidden_size))
     b_hh = nn.Parameter(torch.Tensor(hidden_size))
@@ -92,21 +92,18 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     
     fc = nn.Linear(hidden_size,hidden_size)
     
-    for param in layer_params:
-        self._all_weights.append(param)
-    
-    init_weights_uniform()
+    #init_weights_uniform()
     
     self.output = nn.Linear(hidden_size,1)
     
-
   def init_weights_uniform(self):
     # TODO ========================
     # Initialize all the weights uniformly in the range [-0.1, 0.1]
     # and all the biases to 0 (in place)   
     
     # for weight in 
-    nn.init.uniform_(weight, -0.1, 0.1)
+    # nn.init.uniform_(weight, -0.1, 0.1)
+    return 0
 
   def init_hidden(self):
     # TODO ========================
@@ -477,3 +474,5 @@ class MLP(nn.Module):
     def forward(self, x):
         return self.w_2(self.dropout(F.relu(self.w_1(x))))
 
+
+my_cool = RNN(12,4,10,3,1000,1,12)
