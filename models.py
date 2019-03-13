@@ -72,13 +72,33 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     # for Pytorch to recognize these parameters as belonging to this nn.Module 
     # and compute their gradients automatically. You're not obligated to use the
     # provided clones function.
-    print("what")
+    self.hidden_size = hidden_size
+    self.seq_len = seq_len
+    self.batch_size = batch_size
+    self.vocab_size = vocab_size
+    
+    gate_size = hidden_size
+    
+    self._all_weights = []
+    
+    for layer in range(num_layers):
+        layer_input_size = emb_size if layer == 0 else hidden_size
+        w_ih = nn.Parameter(torch.Tensor(gate_size, layer_input_size))
+        w_hh = nn.Parameter(torch.Tensor(gate_size, hidden_size))
+        b_ih = nn.Parameter(torch.Tensor(gate_size))
+        b_hh = nn.Parameter(torch.Tensor(gate_size))
+        layer_params = (w_ih, w_hh, b_ih, b_hh)
+        for param in layer_params:
+            self._all_weights.append(param)
+    
+    init_weights_uniform()
 
   def init_weights_uniform(self):
     # TODO ========================
     # Initialize all the weights uniformly in the range [-0.1, 0.1]
-    # and all the biases to 0 (in place)
-    return 0
+    # and all the biases to 0 (in place)   
+    
+    nn.init.uniform_(weight, -0.1, 0.1)
 
   def init_hidden(self):
     # TODO ========================
