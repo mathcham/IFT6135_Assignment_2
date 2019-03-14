@@ -77,15 +77,16 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     self.batch_size = batch_size
     self.vocab_size = vocab_size
     self.num_layers = num_layers
+    self.emb_size = emb_size###
     
     self.input = nn.Embedding(vocab_size, emb_size)
     
     self.recurrent = nn.ModuleList()
     for i in range(num_layers):
         input_size = emb_size if i == 0 else hidden_size
-        self.recurrent.append(nn.Linear(input_size, hidden_size))
-        self.recurrent.append(nn.Dropout(p=dp_keep_prob))
-        self.recurrent.append(nn.Linear(hidden_size, hidden_size))
+        self.recurrent.add_module("i2h_" + str(i), nn.Linear(input_size, hidden_size))
+        self.recurrent.add_module("Dropout_" + str(i), nn.Dropout(p=dp_keep_prob))
+        self.recurrent.add_module("h2h_" + str(i), nn.Linear(hidden_size, hidden_size))
     
     self.output = nn.Linear(hidden_size,1)
     self.init_weights_uniform()
@@ -146,6 +147,15 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
                     shape: (num_layers, batch_size, hidden_size)
     """
     
+    embedded_inputs = self.input(inputs)
+    
+    for t in range(self.seq_len):
+        # prediction calculation :
+        h = 0
+        out = []
+        for i in range(self.num_layers):
+            out = torch.tanh(torch.mm(hidden[i],self.recurrent.i2h.weight.data) + self.recurrent.i2h.bias)
+            out = self.recurrent.Dropout
     
     return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
@@ -473,4 +483,4 @@ class MLP(nn.Module):
         return self.w_2(self.dropout(F.relu(self.w_1(x))))
 
 
-my_cool = RNN(12,4,10,3,1000,2,12)
+#my_cool = RNN(12,4,10,3,1000,2,0.5)
