@@ -76,38 +76,29 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     self.seq_len = seq_len
     self.batch_size = batch_size
     self.vocab_size = vocab_size
+    self.num_layers = num_layers
     
     self.input = nn.Embedding(vocab_size, emb_size)
     
     self.recurrent = nn.ModuleList()
-    self.recurrent.append(nn.Linear(emb_size, hidden_size))
-    self.recurrent.append(nn.Dropout())
-    self.recurrent.append(nn.Linear(hidden_size, hidden_size))
-    for _ in range(num_layers-1):
-        self.recurrent.append(nn.Linear(hidden_size, hidden_size))
-        self.recurrent.append(nn.Dropout())
+    for i in range(num_layers):
+        input_size = emb_size if i == 0 else hidden_size
+        self.recurrent.append(nn.Linear(input_size, hidden_size))
+        self.recurrent.append(nn.Dropout(p=dp_keep_prob))
         self.recurrent.append(nn.Linear(hidden_size, hidden_size))
     
     self.output = nn.Linear(hidden_size,1)
     self.init_weights_uniform()
-    self.recurrent.parameters
     
   def init_weights_uniform(self):
     # TODO ========================
     # Initialize all the weights uniformly in the range [-0.1, 0.1]
     # and all the biases to 0 (in place)
-    #for weights in self.parameters():
-    #    weights.data.uniform_(-0.1, 0.1)
-    #nn.init.constant(self.output.bias.data,val=0)
-    #for param in self.recurrent:
-    #    param.
     for name, p in self.named_parameters():
         if 'weight' in name:
             nn.init.uniform_(p,-0.1,0.1)
         elif 'bias' in name:
-            nn.init.constant_(p, 0)
-    
-        
+            nn.init.constant_(p, 0)        
 
   def init_hidden(self):
     # TODO ========================
@@ -115,9 +106,8 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     """
     This is used for the first mini-batch in an epoch, only.
     """
-    h = torch.zeros_like(input_.view(1, input_.size(1), -1))
-    c = torch.zeros_like(input_.view(1, input_.size(1), -1))
-    return h, c # a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
+    h = torch.zeros([self.num_layers,self.batch_size,self.hidden_size])
+    return h # a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
 
   def forward(self, inputs, hidden):
     # TODO ========================
@@ -155,6 +145,8 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
               if you are curious.
                     shape: (num_layers, batch_size, hidden_size)
     """
+    
+    
     return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
   def generate(self, input, hidden, generated_seq_len):
