@@ -101,7 +101,6 @@ from models import make_model as TRANSFORMER
 # ARG PARSING AND EXPERIMENT SETUP
 #
 ##############################################################################
-
 parser = argparse.ArgumentParser(description='PyTorch Penn Treebank Language Modeling')
 
 # Arguments you may need to set to run different experiments in 4.1 & 4.2.
@@ -109,15 +108,15 @@ parser.add_argument('--data', type=str, default='data',
                     help='location of the data corpus')
 parser.add_argument('--model', type=str, default='RNN',
                     help='type of recurrent net (RNN, GRU, TRANSFORMER)')
-parser.add_argument('--optimizer', type=str, default='SGD_LR_SCHEDULE',
+parser.add_argument('--optimizer', type=str, default='ADAM',
                     help='optimization algo to use; SGD, SGD_LR_SCHEDULE, ADAM')
 parser.add_argument('--seq_len', type=int, default=35,
                     help='number of timesteps over which BPTT is performed')
 parser.add_argument('--batch_size', type=int, default=20,
                     help='size of one minibatch')
-parser.add_argument('--initial_lr', type=float, default=20.0,
+parser.add_argument('--initial_lr', type=float, default=0.0001,
                     help='initial learning rate')
-parser.add_argument('--hidden_size', type=int, default=200,
+parser.add_argument('--hidden_size', type=int, default=1500,
                     help='size of hidden layers. IMPORTANT: for the transformer\
                     this must be a multiple of 16.')
 parser.add_argument('--save_best', action='store_true',

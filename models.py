@@ -80,15 +80,18 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     self.emb_size = emb_size###
     
     self.input = nn.Embedding(vocab_size, emb_size)
-    
+    self.fc = nn.Linear(emb_size,hidden_size)
+    self.activation = nn.Tanh()
     self.recurrent = nn.ModuleList()
-    for i in range(num_layers):
-        input_size = emb_size if i == 0 else hidden_size
-        self.recurrent.add_module("i2h_" + str(i), nn.Linear(input_size, hidden_size))
-        self.recurrent.add_module("Dropout_" + str(i), nn.Dropout(p=dp_keep_prob))
-        self.recurrent.add_module("h2h_" + str(i), nn.Linear(hidden_size, hidden_size))
+    for i in range(num_layers):        
+        output_size = vocab_size if i == num_layers-1 else hidden_size
+        module_list = nn.ModuleList()
+        module_list.add_module("h2h", nn.Linear(hidden_size, hidden_size))
+        module_list.add_module("Dropout", nn.Dropout(p=dp_keep_prob))
+        module_list.add_module("h2out", nn.Linear(hidden_size, output_size))
+        self.recurrent.add_module("layer_" + str(i), module_list)
     
-    self.output = nn.Linear(hidden_size,1)
+    #self.output = nn.Linear(hidden_size,1)
     self.init_weights_uniform()
     
   def init_weights_uniform(self):
@@ -148,14 +151,24 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
     """
     
     embedded_inputs = self.input(inputs)
-    
+    layer_inputs = self.fc(embedded_inputs)
+    logits = torch.tensor([])
     for t in range(self.seq_len):
         # prediction calculation :
-        h = 0
-        out = []
-        for i in range(self.num_layers):
-            out = torch.tanh(torch.mm(hidden[i],self.recurrent.i2h.weight.data) + self.recurrent.i2h.bias)
-            out = self.recurrent.Dropout
+        input_i2h = layer_inputs[t]
+        for name, m in self.recurrent.named_modules():
+            for i in range(self.num_layers):
+                layer_name = "layer_" + str(i)
+                if layer_name == name:
+                    #hidden[i] = torch.tanh(input_i2h + torch.mm(hidden[i],m.h2h.weight.data) + m.h2h.bias.data)
+                    
+                    hidden[i] = self.activation(m.h2h(hidden[i].clone()).add(input_i2h))
+                    input_i2h = m.Dropout(hidden[i].clone())
+                    #input_i2h = torch.mm(input_i2h.data,torch.transpose(m.h2out.weight.data, 0, 1)) + m.h2out.bias.data
+                    input_i2h = m.h2out(input_i2h)
+        logits = torch.cat((logits, (input_i2h)), 0)
+                    
+                    
     
     return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
