@@ -297,6 +297,25 @@ class MultiHeadedAttention(nn.Module):
         # Note: the only Pytorch modules you are allowed to use are nn.Linear 
         # and nn.Dropout
         
+        ###########################################################
+        
+        self.dropout= nn.Dropout(dropout)
+        self.tfm = clones(nn.Linear(n_units, n_units), 4)
+        
+        self.w_q = torch.nn.Linear(self.n_units, self.d_k)
+        self.w_q = clones(self.w_q, n_heads)
+        # self.w_1 = nlp.nmt.onmt.modules.BottleLinear(size, hidden_size)
+        
+        self.w_k = torch.nn.Linear(self.n_units, self.d_k)
+        self.w_k = clones(self.w_k, n_heads)
+        
+        self.w_v = torch.nn.Linear(self.n_units, self.d_k)
+        self.w_v = clones(self.w_v, n_heads)
+        
+        self.w_o = torch.nn.Linear(self.n_units, self.n_units)
+        
+        ###########################################################
+        
     def forward(self, query, key, value, mask=None):
         # TODO: implement the masked multi-head attention.
         # query, key, and value all have size: (batch_size, seq_len, self.n_units)
