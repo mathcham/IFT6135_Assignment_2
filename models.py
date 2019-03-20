@@ -290,21 +290,25 @@ class MultiHeadedAttention(nn.Module):
         # be equal to the number of output units divided by the number of heads.
         self.d_k = n_units // n_heads
         # This requires the number of n_heads to evenly divide n_units.
-        assert n_units % n_heads == 0
+        assert n_units % n_heads == 0, \
+           "Make sure n_heads (given: {}) divides n_units (given: {})!".format(
+               n_heads, n_units)
         self.n_units = n_units
         self.n_heads = n_heads
-        # self.relu = F.ReLU() 
-
-        # TODO: 
-        # create and/or 
-        # initialize any necessary parameters or layers
-        # Note: the only Pytorch modules you are allowed to use are 
-        # nn.Linear 
-        # and 
-        # nn.Dropout
+        # self.relu = F.ReLU()
         
+        """
+         TODO: 
+         create and/or 
+         initialize any necessary parameters or layers
+         Note: the only Pytorch modules you are allowed to use are 
+         nn.Linear 
+         and 
+         nn.Dropout
+        """        
         # build layers
         # an affine operation: y = Wx + b
+        
         
         #self.linears = clones(nn.Linear(n_units, n_units), 4)
         
@@ -323,62 +327,84 @@ class MultiHeadedAttention(nn.Module):
         
         # initialize any necessary parameters or layers
         
-        U_bound = np.sqrt(1/n_units)
-        for module in self.W_q, self.W_k, self.W_v, self.W_o :
-            nn.init.uniform_(module.weight, -(U_bound), U_bound)   
-            nn.init.uniform_(module.bias, -(U_bound), U_bound)
-    
+        u = np.sqrt(1/n_units)
+        for module in self.w_q, self.w_k, self.w_v, self.w_o :
+            nn.init.uniform_(module.weight, -u, u)   
+            nn.init.uniform_(module.bias, -u, u)
+            return
+        
+        
+    # define function "attntion"
+   
+    def attention(query, key, value, d_k, mask=None, dropout=None):
+            scores = torch.matmul(query, key.transpose(-2, -1))/math.sqrt(d_k)
+            if mask is not None:
+                mask = mask.unsqueeze(1)
+                scores = scores.masked_fill(mask == 0, -1e9)
+                scores = F.softmax(scores, dim=-1)
+            if dropout is not None:
+                scores = dropout(scores)
+                output = torch.matmul(scores, value)
+                return output
+
     ##########################
+    
     
         # method forward to compute the network output
     def forward(self, query, key, value, mask=None):
-        # TODO: 
-        # implement the masked multi-head attention.
-        # query, 
-        # key, and 
-        # value 
-        # all have size: (batch_size, seq_len, self.n_units)
-        # mask has size: (batch_size, seq_len, seq_len)
-        # As described in the .tex, 
-        # apply input masking to the softmax 
-        # generating the "attention values" (i.e. A_i in the .tex)
-        # Also apply dropout to the attention values.
+        """
+         TODO: 
+         implement the masked multi-head attention.
+         query, 
+         key, and 
+         value 
+         all have size: (batch_size, seq_len, self.n_units)
+         mask has size: (batch_size, seq_len, seq_len)
+         As described in the .tex, 
+         apply input masking to the softmax 
+         generating the "attention values" (i.e. A_i in the .tex)
+         Also apply dropout to the attention values.
+        """
         
+        if mask is not None:
+              # Same mask applied to all h heads.
+              mask = mask.unsqueeze(1)
+              
+        ########################################################################
         batch_size = query.size(0)
-        query = self.w_q(query).view(batch_size, -1, self.n_heads, self.d_k)
-        key   = self.w_k(key).view(batch_size, -1, self.n_heads, self.d_k)
-        value = self.w_v(value).view(batch_size, -1, self.n_heads, self.d_k)
-        
-        # transpose to get dimensions batch_size * n_heads * sl * n_units
-        
-        key   = key.transpose(1, 2)
-        query = query.transpose(1, 2)
-        value = value.transpose(1, 2)
-        
-        scores = attention(query, key, value, self.d_k, mask, self.dropout)
-         
-        concat = scores.transpose(1,2).contiguous().view(batch_size, -1, self.n_units)
-        output = self.out(concat)
+        query = self.w_q(query).view(batch_size, -1, self.n_heads, self.d_k).transpose(1,2)
+        key   = self.w_k(key).view(batch_size, -1, self.n_heads, self.d_k).transpose(1,2)
+        value = self.w_v(value).view(batch_size, -1, self.n_heads, self.d_k).transpose(1,2)
+#        
+#        # transpose to get dimensions batch_size * n_heads * sl * n_units
+#        
+#        key   = key.transpose(1, 2)
+#        query = query.transpose(1, 2)
+#        value = value.transpose(1, 2)
+#        
+#        scores = attention(query, key, value, self.d_k, mask, self.dropout)
+#         
+#        concat = scores.transpose(1,2).contiguous().view(batch_size, -1, self.n_units)
+#        output = self.out(concat)
+#        
+#        return
     
-    return
-    
+#        query = self.w_q(query)
+#        key   = self.w_k(key)
+#        value = self.w_v(value)
+#        for e in query, key, value:
+#            e = e.view(batch_size, -1, self.n_heads, self.d_k).transpose(1,2)
+            
+        score = torch.matmul(query, key.transpose(-2, -1)) / math.sqrt(self.d_k)
+        if mask is not None:
+            score = score.masked_fill(mask == 0, -1e9)
 
-# define function "attntion"
-   
-    def attention(query, key, value, self.d_k, mask=None, dropout=None):
-            scores = torch.matmul(query, key.transpose(-2, -1))/math.sqrt(self.d_k)
-    if mask is not None:
-        mask = mask.unsqueeze(1)
-        scores = scores.masked_fill(mask == 0, -1e9)
-    scores = F.softmax(scores, dim=-1)
-    if dropout is not None:
-    scores = dropout(scores)
-        
-    output = torch.matmul(scores, value)
-    return output
+        probs = self.dropout( F.softmax(score, dim = -1) )
+        xvec = torch.matmul(probs, value)
 
-#    if torch.cuda.is_available():
-#        model.cuda()
+        # Concat all x's.
+        x = xvec.transpose(1, 2).contiguous().view(batch_size, -1, self.n_units)
+        return self.Wo(x)
 
 #----------------------------------------------------------------------------------
 # The encodings of elements of the input sequence
