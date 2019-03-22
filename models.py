@@ -162,14 +162,11 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
                 if layer_name == name:
                     #hidden[i] = torch.tanh(input_i2h + torch.mm(hidden[i],m.h2h.weight.data) + m.h2h.bias.data)
                     
-                    hidden[i] = self.activation(m.h2h(hidden[i].clone()).add(input_i2h))
+                    hidden[i] = self.activation(m.h2h(hidden[i].clone()) + input_i2h)
                     input_i2h = m.Dropout(hidden[i].clone())
                     #input_i2h = torch.mm(input_i2h.data,torch.transpose(m.h2out.weight.data, 0, 1)) + m.h2out.bias.data
                     input_i2h = m.h2out(input_i2h)
         logits = torch.cat((logits, (input_i2h)), 0)
-                    
-                    
-    
     return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
   def generate(self, input, hidden, generated_seq_len):
