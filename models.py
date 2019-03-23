@@ -299,6 +299,16 @@ and a linear layer followed by a softmax.
 #----------------------------------------------------------------------------------
 # Based on http://nlp.seas.harvard.edu/2018/04/03/attention.html -------“Attention is You You Need”--------
 # Based on https://github.com/dreamgonfly/Transformer-pytorch/blob/master/models.py
+'''
+@inproceedings{rush2018annotated,
+  title={The Annotated Transformer},
+  author={Rush, Alexander},
+  booktitle={Proceedings of Workshop for NLP Open Source Software (NLP-OSS)},
+  pages={52--60},
+  year={2018}
+}
+'''
+#
 # TODO: implement this class
 class MultiHeadedAttention(nn.Module):
     def __init__(self, n_heads, n_units, dropout=0.1):
