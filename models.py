@@ -42,6 +42,11 @@ def clones(module, N):
     """
     return nn.ModuleList([copy.deepcopy(module) for _ in range(N)])
 
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
+
 # Problem 1 ######################## see : https://github.com/pytorch/benchmark/blob/master/rnns/benchmarks/lstm_variants/lstm.py
 class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities.
   def __init__(self, emb_size, hidden_size, seq_len, batch_size, vocab_size, num_layers, dp_keep_prob):
@@ -197,6 +202,10 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
    
     return samples
 
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
 
 # Problem 2
 class GRU(nn.Module): # Implement a stacked GRU RNN
@@ -225,7 +234,10 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     # TODO ========================
     return samples
 
-
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
 # Problem 3
 ##############################################################################
 #
@@ -284,7 +296,6 @@ and a linear layer followed by a softmax.
 #SOFTWARE.
 
 
-
 #----------------------------------------------------------------------------------
 
 # TODO: implement this class
@@ -300,27 +311,107 @@ class MultiHeadedAttention(nn.Module):
         # be equal to the number of output units divided by the number of heads.
         self.d_k = n_units // n_heads
         # This requires the number of n_heads to evenly divide n_units.
-        assert n_units % n_heads == 0
-        self.n_units = n_units 
-
-        # TODO: create/initialize any necessary parameters or layers
-        # Note: the only Pytorch modules you are allowed to use are nn.Linear 
-        # and nn.Dropout
+        assert n_units % n_heads == 0, \
+           "Please notice that there is a problem in the devision n_heads (given:{}) divides n_units (given:{}).".format(
+               n_heads, n_units)
+        self.n_units = n_units
+        self.n_heads = n_heads
         
+        """
+         TODO: 
+         create and/or 
+         initialize any necessary parameters or layers
+         Note: the only Pytorch modules you are allowed to use are 
+         nn.Linear 
+         and 
+         nn.Dropout
+        """        
+        # build layers
+        # an affine operation: y = Wx + b        
+        
+        #self.linears = clones(nn.Linear(n_units, n_units), 4)
+        
+        self.w_q = nn.Linear(self.n_units, self.n_units)
+        # self.w_q = clones(self.w_q, n_heads)
+        # self.w_1 = nlp.nmt.onmt.modules.BottleLinear(size, hidden_size)
+        
+        self.w_k = nn.Linear(self.n_units, self.n_units)
+        # self.w_k = clones(self.w_k, n_heads)
+        
+        self.w_v = nn.Linear(self.n_units, self.n_units)
+        # self.w_v = clones(self.w_v, n_heads)
+        
+        self.w_o = nn.Linear(self.n_units, self.n_units)
+        self.dropout= nn.Dropout(dropout)
+        
+        # initialize any necessary parameters or layers
+        
+        u = np.sqrt(1/n_units)
+        for module in self.w_q, self.w_k, self.w_v, self.w_o :
+            nn.init.uniform_(module.weight, -u, u)   
+            nn.init.uniform_(module.bias, -u, u)
+            return
+        
+        
+    # define function "attntion"
+    # Compute 'Scaled Dot Product Attention
+    def attn(self, key, query, value, mask=None, dropout=None):
+            x = torch.matmul(query, key.transpose(-2, -1))/math.sqrt(self.d_k)
+            
+            if mask is not None:
+                mask = mask.float().unsqueeze(1).expand(-1, x.shape[1], -1, -1)
+#               x = x.masked_fill(mask == 0, -1e9)
+                x = (x * mask) - ((1-mask)*(1e9))
+                p_attn = F.softmax(x, dim=-1)
+            if dropout is not None:
+                p_attn = dropout(p_attn)
+                output = torch.matmul(p_attn, value)
+                return output
+
+    ##########################
+    
+    
+        # method forward to compute the network output
     def forward(self, query, key, value, mask=None):
-        # TODO: implement the masked multi-head attention.
-        # query, key, and value all have size: (batch_size, seq_len, self.n_units)
-        # mask has size: (batch_size, seq_len, seq_len)
-        # As described in the .tex, apply input masking to the softmax 
-        # generating the "attention values" (i.e. A_i in the .tex)
-        # Also apply dropout to the attention values.
+        """
+         TODO: 
+         implement the masked multi-head attention.
+         query, 
+         key, and 
+         value 
+         all have size: (batch_size, seq_len, self.n_units)
+         mask has size: (batch_size, seq_len, seq_len)
+         As described in the .tex, 
+         apply input masking to the softmax 
+         generating the "attention values" (i.e. A_i in the .tex)
+         Also apply dropout to the attention values.
+        """
+        
+#        if mask is not None:
+#              # Same mask applied to all h heads.
+#              mask = mask.unsqueeze(1)
+              
+        ########################################################################
+        batch_size = query.size(0)
+        seq_len = query.size(1)
+        query = self.w_q(query).view(batch_size, seq_len, self.n_heads, self.d_k).transpose(1,2)
+        key   = self.w_k(key).view(batch_size, seq_len, self.n_heads, self.d_k).transpose(1,2)
+        value = self.w_v(value).view(batch_size, seq_len, self.n_heads, self.d_k).transpose(1,2)
+        
+        # transpose to get dimensions batch_size * n_heads * sl * n_units
+     
+        scores = self.attn(key, query, value, mask=mask, dropout=self.dropout)
+         
+#        "Concat" using a view and apply a final linear
+        scores = scores.transpose(1,2).contiguous().view(batch_size, seq_len, self.n_units)
+        output = self.w_o(scores)
+#        
+        return output
 
-        return # size: (batch_size, seq_len, self.n_units)
-
-
-
-
-
+###################################################################################################
+###################################################################################################
+###################################################################################################
+###################################################################################################
 
 #----------------------------------------------------------------------------------
 # The encodings of elements of the input sequence
