@@ -208,7 +208,6 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
 ###################################################################################################
 
 # Problem 2
-class GRU(nn.Module): # Implement a stacked GRU RNN
    
 # https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/rnn.py
 
@@ -238,41 +237,74 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
   
 '''
     
-  def __init__(self, emb_size, hidden_size, seq_len, batch_size, vocab_size, num_layers, dp_keep_prob):
-    super(GRU, self).__init__()
-
-    # TODO ===============================================================
-    self.emb_size = emb_size
-    self.hidden_size = hidden_size
-    self.seq_len = seq_len
-    self.batch_size = batch_size
-    self.vocab_size = vocab_size
-    self.num_layers = num_layers
-    self.dp_keep_prob = dp_keep_prob  
-    self.dropout = torch.nn.Dropout(p=(1 - dp_keep_prob))
-    self.tanh = torch.nn.Tanh()
-    self.sigm = torch.nn.Sigmoid()
-    self.bias = bias
+class GRU_Cell(nn.Module):
     
-    self.w_r = torch.nn.Linear(input_size,  hidden_size)
-    self.w_z = torch.nn.Linear(input_size,  hidden_size)
-    self.w_h= torch.nn.Linear(input_size,  hidden_size)
-
-    self.u_r = torch.nn.Linear(hidden_size, hidden_size, bias=False)
-    self.u_z = torch.nn.Linear(hidden_size, hidden_size, bias=False)
-    self.u_h = torch.nn.Linear(hidden_size, hidden_size, bias=False)
-
-    self.b_r = torch.nn.Linear(1,hidden_size)
-    self.b_z = torch.nn.Linear(1,hidden_size)
-    self.b_h = torch.nn.Linear(1,hidden_size)
-
-
-  def init_weights_uniform(self):
+    def __init__(self, input_size, hidden_size, dp_keep_prob):
+        super(GRU_Cell, self).__init__()
+        
+        self.dropout = torch.nn.Dropout(1 - dp_keep_prob)
+        self.tanh = nn.Tanh()
+        self.sigm = nn.Sigmoid()  
+        self.hidden_size = hidden_size
+        
+        self.w_r = torch.nn.Linear(input_size,  hidden_size)
+        self.w_z = torch.nn.Linear(input_size,  hidden_size)
+        self.w_h= torch.nn.Linear(input_size,  hidden_size)
     
-    # TODO =======================================================
-    u = 1 / math.sqrt(self.hidden_size)
-    for module in [self.w_r, self.u_r, self.b_r, self.w_z, self.u_z, self.b_z, self.w_h, self.u_h, self.b_h]:
-        torch.nn.init.uniform_(module, -u, u)
+        self.u_r = torch.nn.Linear(hidden_size, hidden_size, bias=False)
+        self.u_z = torch.nn.Linear(hidden_size, hidden_size, bias=False)
+        self.u_h = torch.nn.Linear(hidden_size, hidden_size, bias=False)
+        
+        self.b_r = torch.nn.Linear(1,hidden_size)
+        self.b_z = torch.nn.Linear(1,hidden_size)
+        self.b_h = torch.nn.Linear(1,hidden_size)
+                  
+    def forward(self, in_to_cell, hid_of_cell):
+        
+        r_t = self.sigm(self.w_r(in_to_cell) + self.u_r(hid_of_cell))
+        z_t = self.sigm(self.w_z(in_to_cell) + self.u_z(hid_of_cell))
+        h_hat = self.tanh(self.w_h(in_to_cell) + self.u_h(r_t*hid_of_cell))
+        h_t = ((1-z_t)*hid_of_cell) + (z_t*h_hat) 
+        y = self.dropout(h_t)
+            
+        return h_t, y
+      
+      
+#####################################################################################################
+
+class GRU(nn.Module): # Implement a stacked GRU RNN
+    def __init__(self, emb_size, hidden_size, seq_len, batch_size, vocab_size, num_layers, dp_keep_prob):
+        super(GRU, self).__init__()
+# TODO ========================
+ 
+        self.emb_size = emb_size
+        self.hidden_size = hidden_size
+        self.seq_len = seq_len
+        self.batch_size = batch_size
+        self.vocab_size = vocab_size
+        self.num_layers = num_layers
+        self.dp_keep_prob = dp_keep_prob  
+        self.tanh = torch.nn.Tanh()
+        self.sigm = torch.nn.Sigmoid()
+##       self.bias = bias
+        self.embedding = torch.nn.Embedding(self.vocab_size, self.emb_size)
+        self.dropout = torch.nn.Dropout(p=(1 - dp_keep_prob))
+        self.w_y = torch.nn.Linear(hidden_size, vocab_size)
+        self.layers = torch.nn.ModuleList()
+        
+        for module in range(1, self.num_layers + 1):
+            [GRU_Cell(hidden_size, emb_size)].append(GRU_Cell(hidden_size, hidden_size))
+        
+        self.hidden_stack = nn.ModuleList([GRU_Cell(hidden_size, emb_size)])
+        self.output = torch.nn.Linear(hidden_size, self.vocab_size)
+        self.init_weights_uniform()
+        
+    def init_weights_uniform(self):
+# TODO ========================
+        u = math.sqrt(1/self.hidden_size)
+        for module in [self.w_r, self.u_r, self.b_r, self.w_z, self.u_z, self.b_z, self.w_h, self.u_h, self.b_h]:
+          torch.nn.init.uniform_(module, -u, u)
+
 
 
   def init_hidden(self):
@@ -323,25 +355,23 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     
 #    return h_t, y
 
-  def generate(self, input, hidden, generated_seq_len):
-        
-    # TODO =======================================================================
+    def generate(self, input, hid_to_cell, generated_seq_len):
+    # TODO ========================
     
-    for module in range(generated_seq_len):
-        current_hid = []
-        in_to_cell = self.embs(input)
+        for module in range(generated_seq_len):
+            current_hid = []
+            in_to_cell = self.embs(input)
         
-        for i in range(self.num_layers):
-            gru_drop, gru_cell = self.module_list[i]
-            out_to_drop = gru_drop(in_to_cell)
-            out_to_cell = gru_cell(out_to_drop, hid_to_cell[i])
-            current_hid.append(out_to_cell)
-            in_to_cell = out_to_cell
+            for i in range(self.num_layers):
+                gru_drop, gru_cell = self.module_list[i]
+                out_to_drop = gru_drop(in_to_cell)
+                out_to_cell = gru_cell(out_to_drop, hid_to_cell[i])
+                current_hid.append(out_to_cell)
+                in_to_cell = out_to_cell
             
-        out_fc_block = self.fc(in_to_cell)
-        hid_to_cell = current_hid
-
-        return torch.multinomiql(torch.nn.functional.softmax(out_fc_block), 1)
+            out_fc_block = self.fc(in_to_cell)
+            hid_to_cell = current_hid
+            return torch.multinomiql(torch.nn.functional.softmax(out_fc_block), 1)
 
 ###################################################################################################
 ###################################################################################################
