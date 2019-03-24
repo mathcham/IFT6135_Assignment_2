@@ -217,21 +217,64 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     super(GRU, self).__init__()
 
     # TODO ========================
+    
+    self.emb_size = emb_size
+    self.hidden_size = hidden_size
+    self.seq_len = seq_len
+    self.batch_size = batch_size
+    self.vocab_size = vocab_size
+    self.num_layers = num_layers
+    self.dp_keep_prob = dp_keep_prob  
+    self.dropout = nn.Dropout(p=(1 - dp_keep_prob))
+    self.tanh = nn.Tanh()
+    self.sigm = nn.Sigmoid()
+    
+    self.w_r = nn.Linear(input_size,  hidden_size)
+    self.w_z = nn.Linear(input_size,  hidden_size)
+    self.w_h= nn.Linear(input_size,  hidden_size)
+    
+    self.u_r = nn.Linear(hidden_size, hidden_size, bias=False)
+    self.u_z = nn.Linear(hidden_size, hidden_size, bias=False)
+    self.u_h = nn.Linear(hidden_size, hidden_size, bias=False)
+    
+    self.b_r = nn.Linear(1,hidden_size)
+    self.b_z = nn.Linear(1,hidden_size)
+    self.b_h = nn.Linear(1,hidden_size)
+    
 
   def init_weights_uniform(self):
+    
     # TODO ========================
     return 0
 
   def init_hidden(self):
+        
     # TODO ========================
+    
+    
+    
+    
     return 0# a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
 
   def forward(self, inputs, hidden):
+        
     # TODO ========================
+    
+    
+    
+    
+    
+    
     return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
   def generate(self, input, hidden, generated_seq_len):
+        
     # TODO ========================
+    
+    
+    
+    
+    
     return samples
 
 ###################################################################################################
