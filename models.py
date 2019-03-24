@@ -209,15 +209,39 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
 
 # Problem 2
 class GRU(nn.Module): # Implement a stacked GRU RNN
+   
+# https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/rnn.py
+
   """
   Follow the same instructions as for RNN (above), but use the equations for 
   GRU, not Vanilla RNN.
+ 
+  For each element in the input sequence, each layer computes the following
+    function:
+    .. math::
+        \begin{array}{ll}
+            r_t = \sigma(W_{ir} x_t + b_{ir} + W_{hr} h_{(t-1)} + b_{hr}) \\
+            z_t = \sigma(W_{iz} x_t + b_{iz} + W_{hz} h_{(t-1)} + b_{hz}) \\
+            \hat{h}_t = \tanh(W_{in} x_t + b_{in} + r_t * (W_{hn} h_{(t-1)}+ b_{hn})) \\
+            h_t = (1 - z_t) * \hat{h}_t + z_t * h_{(t-1)}
+        \end{array}
   """
+
+      ##############################################################################################
+'''
+#  @article{cho2014learning,
+#  title={Learning phrase representations using RNN encoder-decoder for statistical machine translation},
+#  author={Cho, Kyunghyun and Van Merri{\"e}nboer, Bart and Gulcehre, Caglar and Bahdanau, Dzmitry and Bougares, Fethi and Schwenk, Holger and Bengio, Yoshua},
+#  journal={arXiv preprint arXiv:1406.1078},
+#  year={2014}
+#}
+  
+'''
+    
   def __init__(self, emb_size, hidden_size, seq_len, batch_size, vocab_size, num_layers, dp_keep_prob):
     super(GRU, self).__init__()
 
-    # TODO ========================
-    
+    # TODO ===============================================================
     self.emb_size = emb_size
     self.hidden_size = hidden_size
     self.seq_len = seq_len
@@ -225,63 +249,99 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
     self.vocab_size = vocab_size
     self.num_layers = num_layers
     self.dp_keep_prob = dp_keep_prob  
-    self.dropout = nn.Dropout(p=(1 - dp_keep_prob))
-    self.tanh = nn.Tanh()
-    self.sigm = nn.Sigmoid()
+    self.dropout = torch.nn.Dropout(p=(1 - dp_keep_prob))
+    self.tanh = torch.nn.Tanh()
+    self.sigm = torch.nn.Sigmoid()
+    self.bias = bias
     
-    self.w_r = nn.Linear(input_size,  hidden_size)
-    self.w_z = nn.Linear(input_size,  hidden_size)
-    self.w_h= nn.Linear(input_size,  hidden_size)
-    
-    self.u_r = nn.Linear(hidden_size, hidden_size, bias=False)
-    self.u_z = nn.Linear(hidden_size, hidden_size, bias=False)
-    self.u_h = nn.Linear(hidden_size, hidden_size, bias=False)
-    
-    self.b_r = nn.Linear(1,hidden_size)
-    self.b_z = nn.Linear(1,hidden_size)
-    self.b_h = nn.Linear(1,hidden_size)
-    
+    self.w_r = torch.nn.Linear(input_size,  hidden_size)
+    self.w_z = torch.nn.Linear(input_size,  hidden_size)
+    self.w_h= torch.nn.Linear(input_size,  hidden_size)
+
+    self.u_r = torch.nn.Linear(hidden_size, hidden_size, bias=False)
+    self.u_z = torch.nn.Linear(hidden_size, hidden_size, bias=False)
+    self.u_h = torch.nn.Linear(hidden_size, hidden_size, bias=False)
+
+    self.b_r = torch.nn.Linear(1,hidden_size)
+    self.b_z = torch.nn.Linear(1,hidden_size)
+    self.b_h = torch.nn.Linear(1,hidden_size)
+
 
   def init_weights_uniform(self):
     
-    # TODO ========================
-    
-    u = 1.0 / math.sqrt(self.hidden_size)
+    # TODO =======================================================
+    u = 1 / math.sqrt(self.hidden_size)
     for module in [self.w_r, self.u_r, self.b_r, self.w_z, self.u_z, self.b_z, self.w_h, self.u_h, self.b_h]:
-      nn.init.uniform_(module, -u, u)
-    
-    return 0
+        torch.nn.init.uniform_(module, -u, u)
 
 
   def init_hidden(self):
-        
-    # TODO ========================
-    
-    
-    
-    
-    return 0# a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
+
+    # TODO ==============================================================
+    return torch.zeros([self.num_layers, self.batch_size, self.hidden_size])
+    # a parameter tensor of shape (self.num_layers, self.batch_size, self.hidden_size)
+
 
   def forward(self, inputs, hidden):
         
+    # TODO ========================================================
+    '''
+        input.shape()   =&gt; (batch_size, input_size)
+        gru_out.shape() =&gt; (seq_len, batch_size, hidden_size)
+        outputs.shape() =&gt; (seq_len, batch_size, output_size)
+    '''
+    
+    # See details in https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/rnn.py
+    
     # TODO ========================
+        logits = []
+        hid_of_cell_list = []
+        embs = self.embedding(in_to_cell)
+        # shape: (self.seq_len, self.batch_size, self.emb_size)
+  
+        for module in embs:
+            layer_to_out = self.dropout(module)
+            for next_layer, idx  in enumerate(self.module_list):
+                ex_hid_layer = hid_of_cell[idx]
+                hid_layer = hid_of_cell(layer_to_out, ex_hid_layer)
+                layer_to_out = self.dropout(hid_layer)
+                hid_of_cell_list.append(hid_layer)
+            
+            hid_of_cell = torch.stack(hid_of_cell_list)
+            logits.append(self.output(layer_to_out))
+            
+        logits = torch.stack(logits)
+        return logits, hid_of_cell
+        
     
+#    r_t = self.sigm(self.w_r(in_to_cell) + self.u_r(hid_of_cell))
+#    z_t = self.sigm(self.w_z(in_to_cell) + self.u_z(hid_of_cell))
+#    h_hat = self.tanh(self.w_h(in_to_cell) + self.u_h(r*hid_of_cell))
+#    h_t = ((1-z_t)*hid_of_cell) + (z_t*h_hat) 
+#    y = self.dropout(h_t)
+
     
-    
-    
-    
-    
-    return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
+#    return h_t, y
 
   def generate(self, input, hidden, generated_seq_len):
         
-    # TODO ========================
+    # TODO =======================================================================
     
-    
-    
-    
-    
-    return samples
+    for module in range(generated_seq_len):
+        current_hid = []
+        in_to_cell = self.embs(input)
+        
+        for i in range(self.num_layers):
+            gru_drop, gru_cell = self.module_list[i]
+            out_to_drop = gru_drop(in_to_cell)
+            out_to_cell = gru_cell(out_to_drop, hid_to_cell[i])
+            current_hid.append(out_to_cell)
+            in_to_cell = out_to_cell
+            
+        out_fc_block = self.fc(in_to_cell)
+        hid_to_cell = current_hid
+
+        return torch.multinomiql(torch.nn.functional.softmax(out_fc_block), 1)
 
 ###################################################################################################
 ###################################################################################################
@@ -406,10 +466,10 @@ class MultiHeadedAttention(nn.Module):
         
         # initialize any necessary parameters or layers
         
-        u = np.sqrt(1/n_units)
+        u = math.sqrt(1/n_units)
         for module in self.w_q, self.w_k, self.w_v, self.w_o :
-            nn.init.uniform_(module.weight, -u, u)   
-            nn.init.uniform_(module.bias, -u, u)
+            torch.nn.init.uniform_(module.weight, -u, u)   
+            torch.nn.init.uniform_(module.bias, -u, u)
             return
         
         
