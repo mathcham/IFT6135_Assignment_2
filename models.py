@@ -245,7 +245,13 @@ class GRU(nn.Module): # Implement a stacked GRU RNN
   def init_weights_uniform(self):
     
     # TODO ========================
+    
+    u = 1.0 / math.sqrt(self.hidden_size)
+    for module in [self.w_r, self.u_r, self.b_r, self.w_z, self.u_z, self.b_z, self.w_h, self.u_h, self.b_h]:
+      nn.init.uniform_(module, -u, u)
+    
     return 0
+
 
   def init_hidden(self):
         
