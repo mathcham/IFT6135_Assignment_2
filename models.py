@@ -174,6 +174,10 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
         logits = torch.cat((logits, (input_i2h)), 0)
     return logits.view(self.seq_len, self.batch_size, self.vocab_size), hidden
 
+
+####################################################################################
+
+
   def generate(self, input, hidden, generated_seq_len):
     # TODO ========================
     # Compute the forward pass, as in the self.forward method (above).
@@ -199,7 +203,36 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
         - Sampled sequences of tokens
                     shape: (generated_seq_len, batch_size)
     """
-   
+    samples = torch.zeros(([generated_seq_len, self.batch_size]), device=hidden.device)
+    samples = samples.to(torch.device("cuda"))
+    # ex_hid = hidden
+    samples[0,:] = input
+    
+    for module in range(generated_seq_len):
+        current_hid = []
+        # hid_out = self.init_hidden().to(torch.device('cuda'))
+        
+        for layer in range(self.num_layers):
+            if layer == 0:
+                in_to_cell = self.dropout(self.embedding(input))
+            else:
+                in_to_cell = self.dropout(h_t).clone()
+                r_t = self.sigma_r(self.w_r[layer](in_to_cell) + self.u_r[layer](hidden[layer]))
+                z_t = self.sigma_z(self.w_z[layer](in_to_cell) + self.u_z[layer](hidden[layer]))
+                h_hat = self.Tanh_h(self.w_h[layer](in_to_cell) + self.u_h[layer](r_t * hidden[layer]))
+                h_t = (1 - z_t) * hidden[layer] + z_t * h_hat
+                current_hid.append(h_t.clone())
+                
+            hidden = torch.stack(current_hid)
+            p_act = self.w_y(self.dropout(h_t).clone())
+            softm = torch.nn.Softmax(dim=1)
+            probs = softm(p_act)
+            Cat_probs = Categorical(probs)
+            outp = Cat_probs.sample()
+            samples.append(outp)
+            input = outp
+            
+    samples = torch.stack(samples)
     return samples
 
 ###################################################################################################
