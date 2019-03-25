@@ -203,36 +203,26 @@ class RNN(nn.Module): # Implement a stacked vanilla RNN with Tanh nonlinearities
         - Sampled sequences of tokens
                     shape: (generated_seq_len, batch_size)
     """
-    samples = torch.zeros(([generated_seq_len, self.batch_size]), device=hidden.device)
+    samples = torch.zeros([generated_seq_len, self.batch_size])
     samples = samples.to(torch.device("cuda"))
     # ex_hid = hidden
     samples[0,:] = input
     
     for module in range(generated_seq_len):
-        current_hid = []
+        #current_hid = []
         # hid_out = self.init_hidden().to(torch.device('cuda'))
-        
+        in_to_cell = self.encoder(input)
+        in_to_cell = self.drop(in_to_cell)
         for layer in range(self.num_layers):
-            if layer == 0:
-                in_to_cell = self.dropout(self.embedding(input))
-            else:
-                in_to_cell = self.dropout(h_t).clone()
-                r_t = self.sigma_r(self.w_r[layer](in_to_cell) + self.u_r[layer](hidden[layer]))
-                z_t = self.sigma_z(self.w_z[layer](in_to_cell) + self.u_z[layer](hidden[layer]))
-                h_hat = self.Tanh_h(self.w_h[layer](in_to_cell) + self.u_h[layer](r_t * hidden[layer]))
-                h_t = (1 - z_t) * hidden[layer] + z_t * h_hat
-                current_hid.append(h_t.clone())
-                
-            hidden = torch.stack(current_hid)
-            p_act = self.w_y(self.dropout(h_t).clone())
-            softm = torch.nn.Softmax(dim=1)
-            probs = softm(p_act)
-            Cat_probs = Categorical(probs)
-            outp = Cat_probs.sample()
-            samples.append(outp)
-            input = outp
-            
-    samples = torch.stack(samples)
+            hid_temp = self.rec_layers[layer](hidden[layer,:,:])
+            in_to_cell = (self.regular_layers[layer](in_to_cell) + hid_temp)
+            in_to_cell = torch.tanh(in_to_cell)
+            hidden[layer,:,:] = in_to_cell
+            self.drop(in_to_cell)
+        output = self.decoder(in_to_cell)
+        output = F.softmax(output, dim=0)
+        output = torch.multinomial(output, 1)
+        samples[module,:] = output.squeeze()
     return samples
 
 ###################################################################################################
