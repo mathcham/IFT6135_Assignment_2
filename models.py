@@ -465,7 +465,7 @@ and a linear layer followed by a softmax.
 
 
 #----------------------------------------------------------------------------------
-# Based on http://nlp.seas.harvard.edu/2018/04/03/attention.html -------“Attention is You You Need”--------
+# Based on http://nlp.seas.harvard.edu/2018/04/03/attention.html -------"Attention is You You Need"--------
 # Based on https://github.com/dreamgonfly/Transformer-pytorch/blob/master/models.py
 '''
 @inproceedings{rush2018annotated,
